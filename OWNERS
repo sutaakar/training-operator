@@ -1,12 +1,12 @@
 approvers:
-  - andreyvelich
-  - gaocegege
-  - Jeffwan
-  - johnugeorge
-  - tenzen-y
-  - terrytangyuan
+  - astefanutti
+  - Fiona-Waters
+  - sutaakar
+
 reviewers:
-  - jinchihe
-  - kuizhiqing
-emeritus_approvers:
-  - zw0610
+  - abhijeet-dhumal
+  - astefanutti
+  - ChughShilpa 
+  - Fiona-Waters
+  - oksanabaza 
+  - sutaakar
