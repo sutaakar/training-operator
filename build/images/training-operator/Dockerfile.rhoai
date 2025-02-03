@@ -37,6 +37,8 @@ RUN CGO_ENABLED=1 GOOS=linux GO111MODULE=on go build -tags strictfipsruntime -a 
 # Runtime
 FROM registry.access.redhat.com/ubi9/ubi:latest
 
+RUN dnf update && dnf install -y bind-utils
+
 WORKDIR /
 COPY --from=builder /workspace/manager .
 USER 65532:65532
