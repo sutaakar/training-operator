@@ -54,7 +54,7 @@ const (
 	// EnvKubeflowNamespace is an environment variable for namespace when deployed on kubernetes
 	EnvKubeflowNamespace = "KUBEFLOW_NAMESPACE"
 
-	webhookConfigurationName = "validator.training-operator.kubeflow.org"
+	webhookConfigurationName = "kubeflow-validator.training-operator.kubeflow.org"
 )
 
 var (

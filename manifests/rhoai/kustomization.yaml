@@ -44,9 +44,21 @@ resources:
 - kubeflow-training-roles.yaml
 - monitor.yaml
 
+secretGenerator:
+  - name: training-operator-webhook-cert
+    options:
+      disableNameSuffixHash: true
+
 patches:
 # Mount the controller config file for loading manager configurations
 # through a ComponentConfig type
 - path: manager_config_patch.yaml
 - path: manager_metrics_patch.yaml
-- path: manager_delete_metrics_service_patch.yaml
+- patch: |-
+    - op: remove
+      path: /spec/ports/0
+  target:
+    group: ""
+    version: v1
+    kind: Service
+    name: training-operator
