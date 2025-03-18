@@ -23,7 +23,7 @@ spec:
         spec:
           containers:
             - name: pytorch
-              image: kubeflow/pytorch-elastic-example-imagenet:latest
+              image: ghcr.io/kubeflow/training/pytorch-elastic-example-imagenet:latest
               imagePullPolicy: IfNotPresent
               resources:
                 requests:
