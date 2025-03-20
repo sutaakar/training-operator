@@ -5,7 +5,7 @@ resources:
   - ../../base
   - kubeflow-training-roles.yaml
 images:
-  - name: ghcr.io/kubeflow/training/training-operator
+  - name: ghcr.io/kubeflow/training-v1/training-operator
     newTag: v1-f654b1e
 # TODO (tenzen-y): Once we support cert-manager, we need to remove this secret generation.
 # REF: https://github.com/kubeflow/training-operator/issues/2049
