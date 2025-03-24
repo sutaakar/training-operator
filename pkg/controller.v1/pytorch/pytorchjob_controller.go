@@ -38,7 +38,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	metav1ac "k8s.io/client-go/applyconfigurations/meta/v1"
+	networkingv1ac "k8s.io/client-go/applyconfigurations/networking/v1"
 	"k8s.io/client-go/informers"
 	kubeclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
@@ -155,6 +158,13 @@ func (r *PyTorchJobReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Set default priorities to pytorch job
 	r.Scheme.Default(pytorchjob)
 
+	_, err = r.KubeClientSet.NetworkingV1().NetworkPolicies(pytorchjob.Namespace).
+		Apply(ctx, desiredPyTorchJobNetworkPolicy(pytorchjob), metav1.ApplyOptions{FieldManager: r.ControllerName(), Force: true})
+	if err != nil {
+		logger.Error(err, "Failed to update NetworkPolicy")
+		return ctrl.Result{}, err
+	}
+
 	err = r.ReconcileHPA(pytorchjob)
 	if err != nil {
 		logger.Error(err, "Reconcile PyTorchJob HPA error")
@@ -226,6 +236,7 @@ func (r *PyTorchJobReconciler) SetupWithManager(mgr ctrl.Manager, controllerThre
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -524,4 +535,40 @@ func (r *PyTorchJobReconciler) onOwnerCreateFunc() func(createEvent event.TypedC
 		commonutil.UpdateJobConditions(&pytorchjob.Status, kubeflowv1.JobCreated, corev1.ConditionTrue, commonutil.NewReason(kubeflowv1.PyTorchJobKind, commonutil.JobCreatedReason), msg)
 		return true
 	}
+}
+
+func desiredPyTorchJobNetworkPolicy(job *kubeflowv1.PyTorchJob) *networkingv1ac.NetworkPolicyApplyConfiguration {
+	return networkingv1ac.NetworkPolicy(job.Name, job.Namespace).
+		WithLabels(map[string]string{kubeflowv1.JobNameLabel: job.Name}).
+		WithSpec(networkingv1ac.NetworkPolicySpec().
+			WithPodSelector(metav1ac.LabelSelector().WithMatchLabels(map[string]string{kubeflowv1.JobNameLabel: job.Name})).
+			WithIngress(
+				networkingv1ac.NetworkPolicyIngressRule().
+					WithFrom(
+						networkingv1ac.NetworkPolicyPeer().WithPodSelector(metav1ac.LabelSelector().WithMatchLabels(map[string]string{kubeflowv1.JobNameLabel: job.Name})),
+					),
+				networkingv1ac.NetworkPolicyIngressRule().
+					WithFrom(
+						networkingv1ac.NetworkPolicyPeer().WithNamespaceSelector(metav1ac.LabelSelector().
+							WithMatchExpressions(metav1ac.LabelSelectorRequirement().
+								WithKey(corev1.LabelMetadataName).
+								WithOperator(metav1.LabelSelectorOpIn).
+								WithValues("openshift-monitoring"))),
+					).
+					WithPorts(
+						networkingv1ac.NetworkPolicyPort().WithProtocol(corev1.ProtocolTCP).WithPort(intstr.FromInt(8080)),
+					),
+			),
+		).
+		WithOwnerReferences(ownerRefForPyTorchJob(job))
+}
+
+func ownerRefForPyTorchJob(job *kubeflowv1.PyTorchJob) *metav1ac.OwnerReferenceApplyConfiguration {
+	return metav1ac.OwnerReference().
+		WithAPIVersion(job.APIVersion).
+		WithKind(job.Kind).
+		WithName(job.Name).
+		WithUID(job.UID).
+		WithBlockOwnerDeletion(true).
+		WithController(true)
 }
