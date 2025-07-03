@@ -1,4 +1,4 @@
-module github.com/kubeflow/trainer
+module github.com/kubeflow/trainer/v2
 
 go 1.24.0
 
