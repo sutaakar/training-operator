@@ -54,13 +54,6 @@ func setPodEnv(obj interface{}, podTemplateSpec *corev1.PodTemplateSpec, rtype, 
 			podTemplateSpec.Spec.Containers[i].Env = make([]corev1.EnvVar, 0)
 		}
 
-		// Inject checkpointing environment variables from annotations.
-		checkpointEnvVars := extractCheckpointEnvVars(pytorchjob)
-		if len(checkpointEnvVars) > 0 {
-			podTemplateSpec.Spec.Containers[i].Env = append(
-				podTemplateSpec.Spec.Containers[i].Env, checkpointEnvVars...)
-		}
-
 		// Set PYTHONUNBUFFERED to true, to disable output buffering.
 		// Ref https://stackoverflow.com/questions/59812009/what-is-the-use-of-pythonunbuffered-in-docker-file.
 		podTemplateSpec.Spec.Containers[i].Env = append(
@@ -137,6 +130,21 @@ func setPodEnv(obj interface{}, podTemplateSpec *corev1.PodTemplateSpec, rtype, 
 			Name:  EnvTrainingProgressFilePath,
 			Value: GetProgressFilePath(pytorchjob),
 		})
+
+		// Inject checkpointing environment variables from annotations.
+		checkpointEnvVars := extractCheckpointEnvVars(pytorchjob)
+		for _, checkpointEnvVar := range checkpointEnvVars {
+			exist := false
+			for _, envVar := range podTemplateSpec.Spec.Containers[i].Env {
+				if envVar.Name == checkpointEnvVar.Name {
+					exist = true
+					break
+				}
+			}
+			if !exist {
+				podTemplateSpec.Spec.Containers[i].Env = append(podTemplateSpec.Spec.Containers[i].Env, checkpointEnvVar)
+			}
+		}
 	}
 
 	return nil
