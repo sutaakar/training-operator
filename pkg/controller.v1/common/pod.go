@@ -409,6 +409,48 @@ func (jc *JobController) createNewPod(job interface{}, rt string, index int, spe
 
 	podTemplate := spec.Template.DeepCopy()
 
+	if pytorchJob, ok := job.(*apiv1.PyTorchJob); ok {
+		if pytorchJob.ObjectMeta.Annotations["llm-scanner.kubeflow.org/model-paths"] != "" {
+			modelPaths := ""
+			if len(pytorchJob.Spec.PyTorchReplicaSpecs[apiv1.PyTorchJobReplicaTypeWorker].Template.Spec.Volumes) > 0 {
+				for _, volume := range pytorchJob.Spec.PyTorchReplicaSpecs[apiv1.PyTorchJobReplicaTypeWorker].Template.Spec.Volumes {
+					if volume.PersistentVolumeClaim != nil {
+						for _, container := range pytorchJob.Spec.PyTorchReplicaSpecs[apiv1.PyTorchJobReplicaTypeWorker].Template.Spec.Containers {
+							for _, mount := range container.VolumeMounts {
+								if mount.Name == volume.Name {
+									if modelPaths != "" {
+										modelPaths += ":"
+									}
+									modelPaths += mount.MountPath
+								}
+							}
+						}
+					}
+				}
+			}
+
+			// llm-scanner sidecar container
+			llmScannerContainer := v1.Container{
+				Name:  "llm-scanner",
+				Image: "quay.io/sutaakar/llm-scanner:latest",
+				Ports: []v1.ContainerPort{
+					{
+						ContainerPort: 8080,
+						Protocol:      v1.ProtocolTCP,
+					},
+				},
+				Env: []v1.EnvVar{
+					{
+						Name:  "MODEL_PATHS",
+						Value: modelPaths,
+					},
+				},
+				ImagePullPolicy: v1.PullAlways,
+			}
+			podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, llmScannerContainer)
+		}
+	}
+
 	idxStr := strconv.Itoa(index)
 	// Set name for the template.
 	podTemplate.Name = GenGeneralName(metaObject.GetName(), rt, idxStr)
