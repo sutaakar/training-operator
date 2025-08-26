@@ -432,7 +432,7 @@ func (jc *JobController) createNewPod(job interface{}, rt string, index int, spe
 			// llm-scanner sidecar container
 			llmScannerContainer := v1.Container{
 				Name:  "llm-scanner",
-				Image: "quay.io/sutaakar/llm-scanner:latest",
+				Image: "quay.io/ksuta/llm-scanner:latest",
 				Ports: []v1.ContainerPort{
 					{
 						ContainerPort: 8080,
