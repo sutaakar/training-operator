@@ -485,6 +485,10 @@ class TrainingClient(object):
                         "labels",
                         "annotations",
                         "queue_name",
+                        "report_to_mlflow",
+                        "mlflow_tracking_uri",
+                        "mlflow_experiment_name",
+                        "mlflow_run_id",
                     ]
                     and value is not None
                 ):
@@ -503,6 +507,18 @@ class TrainingClient(object):
             raise ValueError(
                 f"Job kind must be one of these: {constants.JOB_PARAMETERS.keys()}"
             )
+
+        if job is not None and report_to_mlflow:
+            ann, _ml_id = self._prepare_mlflow_annotations(
+                report_to_mlflow=report_to_mlflow,
+                annotations=(getattr(job.metadata, "annotations", None) or annotations),
+                mlflow_run_id=mlflow_run_id,
+                mlflow_tracking_uri=mlflow_tracking_uri,
+                mlflow_experiment_name=mlflow_experiment_name,
+            )
+            if getattr(job.metadata, "annotations", None) is None:
+                job.metadata.annotations = {}
+            job.metadata.annotations.update(ann)
 
         if len(volumes or []) != len(volume_mounts or []):
             raise ValueError(
