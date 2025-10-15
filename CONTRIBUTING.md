@@ -217,4 +217,4 @@ kubectl logs -n kubeflow -l training.kubeflow.org/job-name=pytorch-simple --foll
 
 Changes to the Kubeflow Trainer Python SDK can be made in the https://github.com/kubeflow/sdk repo.
 
-The Trainer SDK can be found at https://github.com/kubeflow/sdk/tree/main/kubeflow/trainer.
+The Trainer SDK can be found at https://github.com/kubeflow/sdk/tree/main/python/kubeflow/trainer.

@@ -34,13 +34,13 @@ import (
 	jobsetv1alpha2 "sigs.k8s.io/jobset/api/jobset/v1alpha2"
 	jobsetv1alpha2ac "sigs.k8s.io/jobset/client-go/applyconfiguration/jobset/v1alpha2"
 
-	trainer "github.com/kubeflow/trainer/v2/pkg/apis/trainer/v1alpha1"
-	"github.com/kubeflow/trainer/v2/pkg/apply"
-	"github.com/kubeflow/trainer/v2/pkg/constants"
-	"github.com/kubeflow/trainer/v2/pkg/runtime"
-	fwkcore "github.com/kubeflow/trainer/v2/pkg/runtime/framework/core"
-	fwkplugins "github.com/kubeflow/trainer/v2/pkg/runtime/framework/plugins"
-	idxer "github.com/kubeflow/trainer/v2/pkg/runtime/indexer"
+	trainer "github.com/kubeflow/trainer/pkg/apis/trainer/v1alpha1"
+	"github.com/kubeflow/trainer/pkg/apply"
+	"github.com/kubeflow/trainer/pkg/constants"
+	"github.com/kubeflow/trainer/pkg/runtime"
+	fwkcore "github.com/kubeflow/trainer/pkg/runtime/framework/core"
+	fwkplugins "github.com/kubeflow/trainer/pkg/runtime/framework/plugins"
+	idxer "github.com/kubeflow/trainer/pkg/runtime/indexer"
 )
 
 var (
@@ -85,21 +85,13 @@ func (r *TrainingRuntime) NewObjects(ctx context.Context, trainJob *trainer.Trai
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", errorNotFoundSpecifiedTrainingRuntime, err)
 	}
-	info, err := r.RuntimeInfo(trainJob, trainingRuntime.Spec.Template, trainingRuntime.Spec.MLPolicy, trainingRuntime.Spec.PodGroupPolicy)
-	if err != nil {
-		return nil, err
-	}
-	return r.framework.RunComponentBuilderPlugins(ctx, info, trainJob)
+	return r.buildObjects(ctx, trainJob, trainingRuntime.Spec.Template, trainingRuntime.Spec.MLPolicy, trainingRuntime.Spec.PodGroupPolicy)
 }
 
-func (r *TrainingRuntime) RuntimeInfo(
-	trainJob *trainer.TrainJob, runtimeTemplateSpec any, mlPolicy *trainer.MLPolicy, podGroupPolicy *trainer.PodGroupPolicy,
-) (*runtime.Info, error) {
+func (r *TrainingRuntime) buildObjects(
+	ctx context.Context, trainJob *trainer.TrainJob, jobSetTemplateSpec trainer.JobSetTemplateSpec, mlPolicy *trainer.MLPolicy, podGroupPolicy *trainer.PodGroupPolicy,
+) ([]any, error) {
 
-	jobSetTemplateSpec, ok := runtimeTemplateSpec.(trainer.JobSetTemplateSpec)
-	if !ok {
-		return nil, fmt.Errorf("unsupported runtimeTemplateSpec")
-	}
 	info, err := r.newRuntimeInfo(trainJob, jobSetTemplateSpec, mlPolicy, podGroupPolicy)
 	if err != nil {
 		return nil, err
@@ -116,7 +108,7 @@ func (r *TrainingRuntime) RuntimeInfo(
 		return nil, err
 	}
 
-	return info, nil
+	return r.framework.RunComponentBuilderPlugins(ctx, info, trainJob)
 }
 
 func (r *TrainingRuntime) newRuntimeInfo(
@@ -270,5 +262,5 @@ func (r *TrainingRuntime) ValidateObjects(ctx context.Context, old, new *trainer
 		}
 	}
 	info, _ := r.newRuntimeInfo(new, trainingRuntime.Spec.Template, trainingRuntime.Spec.MLPolicy, trainingRuntime.Spec.PodGroupPolicy) // ignoring the error here as the runtime configured should be valid
-	return r.framework.RunCustomValidationPlugins(ctx, info, old, new)
+	return r.framework.RunCustomValidationPlugins(info, old, new)
 }

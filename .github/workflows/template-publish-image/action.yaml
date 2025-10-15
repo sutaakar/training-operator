@@ -82,7 +82,7 @@ runs:
         images: ${{ inputs.image }}
         tags: |
           type=ref,event=tag
-          type=raw,value=latest,enable={{is_default_branch}}
+          type=raw,latest
           type=sha
 
     - name: Build and Push

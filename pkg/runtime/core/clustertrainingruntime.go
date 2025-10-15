@@ -27,8 +27,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	trainer "github.com/kubeflow/trainer/v2/pkg/apis/trainer/v1alpha1"
-	"github.com/kubeflow/trainer/v2/pkg/runtime"
+	trainer "github.com/kubeflow/trainer/pkg/apis/trainer/v1alpha1"
+	"github.com/kubeflow/trainer/pkg/runtime"
 )
 
 var (
@@ -57,18 +57,7 @@ func (r *ClusterTrainingRuntime) NewObjects(ctx context.Context, trainJob *train
 	if err := r.client.Get(ctx, client.ObjectKey{Name: trainJob.Spec.RuntimeRef.Name}, &clTrainingRuntime); err != nil {
 		return nil, fmt.Errorf("%w: %w", errorNotFoundSpecifiedClusterTrainingRuntime, err)
 	}
-
-	info, err := r.RuntimeInfo(trainJob, clTrainingRuntime.Spec.Template, clTrainingRuntime.Spec.MLPolicy, clTrainingRuntime.Spec.PodGroupPolicy)
-	if err != nil {
-		return nil, err
-	}
-	return r.framework.RunComponentBuilderPlugins(ctx, info, trainJob)
-}
-
-func (r *ClusterTrainingRuntime) RuntimeInfo(
-	trainJob *trainer.TrainJob, runtimeTemplateSpec any, mlPolicy *trainer.MLPolicy, podGroupPolicy *trainer.PodGroupPolicy,
-) (*runtime.Info, error) {
-	return r.TrainingRuntime.RuntimeInfo(trainJob, runtimeTemplateSpec, mlPolicy, podGroupPolicy)
+	return r.buildObjects(ctx, trainJob, clTrainingRuntime.Spec.Template, clTrainingRuntime.Spec.MLPolicy, clTrainingRuntime.Spec.PodGroupPolicy)
 }
 
 func (r *ClusterTrainingRuntime) TerminalCondition(ctx context.Context, trainJob *trainer.TrainJob) (*metav1.Condition, error) {
@@ -90,5 +79,5 @@ func (r *ClusterTrainingRuntime) ValidateObjects(ctx context.Context, old, new *
 		}
 	}
 	info, _ := r.newRuntimeInfo(new, clusterTrainingRuntime.Spec.Template, clusterTrainingRuntime.Spec.MLPolicy, clusterTrainingRuntime.Spec.PodGroupPolicy)
-	return r.framework.RunCustomValidationPlugins(ctx, info, old, new)
+	return r.framework.RunCustomValidationPlugins(info, old, new)
 }
