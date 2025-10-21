@@ -40,7 +40,7 @@ image:
   # -- Image repository.
   repository: kubeflow/trainer/trainer-controller-manager
   # -- Image tag.
-  tag: latest
+  tag: v2.1.0-rc.0
   # -- Image pull policy.
   pullPolicy: IfNotPresent
   # -- Image pull secrets for private image registry.
