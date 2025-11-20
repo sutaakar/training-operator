@@ -23,6 +23,8 @@ env:
 jobs:
   lake-gate:
     runs-on: ubuntu-latest
+#    if: github.repository_owner == 'opendatahub-io'
+    if: github.repository_owner == 'sutaakar'
 
     steps:
     - name: Checkout repository
