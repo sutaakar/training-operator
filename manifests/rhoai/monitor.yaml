@@ -10,3 +10,6 @@ spec:
       app.kubernetes.io/component: controller
   podMetricsEndpoints:
     - port: metrics
+      scheme: https
+      tlsConfig:
+        insecureSkipVerify: true

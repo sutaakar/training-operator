@@ -8,5 +8,5 @@ spec:
       containers:
       - name: manager
         ports:
-        - containerPort: 8080
+        - containerPort: 8443
           name: metrics
