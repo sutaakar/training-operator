@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package test
+package rhai
 
 import (
 	"encoding/json"
@@ -43,12 +43,6 @@ const (
 	interval           = 2 * time.Second
 	consistentDuration = 8 * time.Second
 	wrapperTestRuntime = "wrapper-test-runtime"
-
-	// SDK poll interval constraints (from kubeflow/trainer SDK)
-	// TransformersTrainer.metrics_poll_interval_seconds enforces 5-300 range
-	minSDKPollIntervalSeconds  = 5   // Minimum: 5 seconds (prevents excessive controller load)
-	maxSDKPollIntervalSeconds  = 300 // Maximum: 300 seconds (5 minutes, keeps tracking responsive)
-	defaultPollIntervalSeconds = 30  // Default: 30 seconds (balanced)
 )
 
 // loadRuntimeFromFile loads TrainingRuntime from YAML file and sets namespace
