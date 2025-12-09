@@ -278,7 +278,7 @@ func TestPollTrainingProgress(t *testing.T) {
 			// Create test server
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tt.responseStatus)
-				w.Write([]byte(tt.responseBody))
+				_, _ = w.Write([]byte(tt.responseBody))
 			}))
 			defer server.Close()
 
@@ -1761,8 +1761,4 @@ func ptrInt(i int) *int {
 
 func ptrFloat64(f float64) *float64 {
 	return &f
-}
-
-func ptrString(s string) *string {
-	return &s
 }
