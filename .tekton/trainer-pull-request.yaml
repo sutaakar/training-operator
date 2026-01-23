@@ -16,7 +16,7 @@ metadata:
     appstudio.openshift.io/application: opendatahub-builds
     appstudio.openshift.io/component: trainer-ci
     pipelines.appstudio.openshift.io/type: build
-  name: trainer-on-push
+  name: trainer-on-pull-request
   namespace: open-data-hub-tenant
 spec:
   params:
