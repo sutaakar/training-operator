@@ -21,6 +21,9 @@ jobs:
     runs-on: ubuntu-latest
     if: contains(github.event.pull_request.labels.*.name, 'lake-gate') || (github.event.check_suite && github.event.check_suite.conclusion == 'success')
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Get PR details
         id: pr
         env:
