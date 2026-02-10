@@ -1,0 +1,128 @@
+name: Auto-merge Lake Gate PRs
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - labeled
+  check_suite:
+    types:
+      - completed
+  status: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.labels.*.name, 'lake-gate') || (github.event.check_suite && github.event.check_suite.conclusion == 'success')
+    steps:
+      - name: Get PR details
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Determine which PR to work with based on event type
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            PR_NUMBER="${{ github.event.pull_request.number }}"
+          elif [ "${{ github.event_name }}" = "check_suite" ] || [ "${{ github.event_name }}" = "status" ]; then
+            # For check_suite or status events, find the PR by branch/commit
+            BRANCH="${{ github.event.check_suite.head_branch }}"
+            if [ -z "$BRANCH" ]; then
+              echo "No branch found for this event"
+              exit 0
+            fi
+
+            # Find open PRs with lake-gate label for this branch
+            PR_NUMBER=$(gh pr list --label "lake-gate" --state open --head "$BRANCH" --json number --jq '.[0].number')
+
+            if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ]; then
+              echo "No open PR found for branch $BRANCH with lake-gate label"
+              exit 0
+            fi
+          else
+            echo "No PR found for event type ${{ github.event_name }}"
+            exit 0
+          fi
+
+          # Verify PR has lake-gate label
+          LABELS=$(gh pr view "$PR_NUMBER" --json labels --jq '.labels[].name')
+          if ! echo "$LABELS" | grep -q "lake-gate"; then
+            echo "PR #$PR_NUMBER does not have lake-gate label"
+            exit 0
+          fi
+
+          echo "Found PR #$PR_NUMBER with lake-gate label"
+          echo "number=$PR_NUMBER" >> $GITHUB_OUTPUT
+
+      - name: Wait for checks
+        if: steps.pr.outputs.number
+        id: wait
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER="${{ steps.pr.outputs.number }}"
+
+          # Wait a bit to ensure all checks are registered
+          sleep 10
+
+          # Check PR status
+          CHECKS_OUTPUT=$(gh pr checks "$PR_NUMBER" 2>&1) || true
+          CHECKS_STATUS=$?
+
+          echo "Checks output:"
+          echo "$CHECKS_OUTPUT"
+
+          # Check if all checks passed
+          if echo "$CHECKS_OUTPUT" | grep -qE "(pending|fail)"; then
+            echo "Some checks are still pending or have failed"
+            echo "ready=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # If we get here and checks command succeeded, all checks passed
+          if [ $CHECKS_STATUS -eq 0 ]; then
+            echo "All checks have passed"
+            echo "ready=true" >> $GITHUB_OUTPUT
+          else
+            echo "No checks found yet or error checking status"
+            echo "ready=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Auto-merge PR
+        if: steps.pr.outputs.number && steps.wait.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER="${{ steps.pr.outputs.number }}"
+
+          echo "Merging PR #$PR_NUMBER"
+          gh pr merge "$PR_NUMBER" \
+            --merge \
+            --subject "Auto-merge lake-gate PR #$PR_NUMBER" \
+            --body "Automatically merged after all checks passed"
+
+          echo "✅ Successfully merged PR #$PR_NUMBER"
+
+      - name: Cleanup branch
+        if: steps.pr.outputs.number && steps.wait.outputs.ready == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER="${{ steps.pr.outputs.number }}"
+
+          # Get branch name from PR
+          BRANCH_NAME=$(gh pr view "$PR_NUMBER" --json headRefName --jq '.headRefName')
+
+          # Only delete if it's an automation branch
+          if [[ "$BRANCH_NAME" =~ ^lake-gate- ]]; then
+            echo "Deleting branch $BRANCH_NAME"
+            git push origin --delete "$BRANCH_NAME" || echo "Branch already deleted or doesn't exist remotely"
+          else
+            echo "Skipping branch deletion - branch name doesn't match lake-gate-* pattern"
+          fi
