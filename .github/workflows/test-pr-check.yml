@@ -36,3 +36,4 @@ jobs:
             python3 -c "import yaml; yaml.safe_load(open('$file'))"
           done
           echo "✅ All workflow files are valid YAML"
+
