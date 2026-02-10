@@ -193,16 +193,7 @@ jobs:
             echo "✅ Successfully fast-forwarded stable to $TARGET_SHA"
 
             # Close the PR with success message
-            gh pr close "$PR_NUMBER" --comment "✅ **Successfully synced!**
-
-The \`stable\` branch has been fast-forwarded to point to the exact same commit as \`main\` (\`${TARGET_SHA:0:8}\`).
-
-The \`stable\` and \`main\` branches now point to identical commits - no merge commit was created.
-
-\`\`\`
-main   → ${TARGET_SHA:0:8}
-stable → ${TARGET_SHA:0:8}  (same SHA)
-\`\`\`"
+            printf "✅ **Successfully synced!**\n\nThe \`stable\` branch has been fast-forwarded to point to the exact same commit as \`main\` (\`${TARGET_SHA:0:8}\`).\n\nThe \`stable\` and \`main\` branches now point to identical commits - no merge commit was created.\n\n\`\`\`\nmain   → ${TARGET_SHA:0:8}\nstable → ${TARGET_SHA:0:8}  (same SHA)\n\`\`\`\n" | gh pr close "$PR_NUMBER" --comment-file -
           else
             echo "ERROR: Fast-forward push succeeded but stable is at unexpected SHA: $STABLE_SHA (expected $TARGET_SHA)"
             gh pr comment "$PR_NUMBER" --body "⚠️ Fast-forward completed but verification failed. Please check manually."
@@ -215,15 +206,7 @@ stable → ${TARGET_SHA:0:8}  (same SHA)
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PR_NUMBER="${{ steps.pr.outputs.number }}"
-          gh pr comment "$PR_NUMBER" --body "❌ **Cannot perform fast-forward merge**
-
-Verification failed - please check the workflow logs for details.
-
-This usually means:
-- The PR branch doesn't point to the same commit as \`main\`
-- The \`main\` branch is not a direct descendant of \`stable\`
-
-A new sync PR will be created on the next scheduled run."
+          printf "❌ **Cannot perform fast-forward merge**\n\nVerification failed - please check the workflow logs for details.\n\nThis usually means:\n- The PR branch doesn't point to the same commit as \`main\`\n- The \`main\` branch is not a direct descendant of \`stable\`\n\nA new sync PR will be created on the next scheduled run.\n" | gh pr comment "$PR_NUMBER" --body-file -
 
       - name: Cleanup branch
         if: steps.pr.outputs.number && steps.wait.outputs.ready == 'true' && steps.verify.outputs.can_ff == 'true'
