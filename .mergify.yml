@@ -1,0 +1,12 @@
+queue_rules:
+  - name: lake-gate
+    merge_method: fast-forward
+    autoqueue: true
+    queue_conditions:
+      - base=stable
+      - label=lake-gate
+      - -draft
+      - -closed
+    merge_conditions:
+      - "#check-failure=0"
+      - "#check-pending=0"
