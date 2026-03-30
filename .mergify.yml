@@ -1,0 +1,11 @@
+queue_rules:
+  - name: lake-gate
+    merge_method: merge
+    autoqueue: true
+    queue_conditions:
+      - base=stable
+      - label=lake-gate
+      - -draft
+      - -closed
+    merge_conditions:
+      - check-success~=ok-to-test
