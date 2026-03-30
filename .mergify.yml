@@ -1,0 +1,18 @@
+pull_request_rules:
+  - name: Auto-merge lake-gate PRs to stable
+    description: >
+      Automatically fast-forward merge lake-gate PRs into the stable branch
+      once all checks pass. These PRs are created by the sync-stream-to-lake
+      workflow to sync main into stable.
+    conditions:
+      - base=stable
+      - label=lake-gate
+      - -draft
+      - "#check-failure=0"
+      - "#check-pending=0"
+      - -closed
+    actions:
+      merge:
+        method: fast-forward
+      delete_head_branch:
+        force: false
