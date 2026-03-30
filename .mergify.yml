@@ -1,0 +1,13 @@
+pull_request_rules:
+  - name: Auto-merge lake-gate PRs to stable
+    conditions:
+      - base=stable
+      - label=lake-gate
+      - -draft
+      - -closed
+      - check-success~=.*
+    actions:
+      review:
+        type: APPROVE
+      merge:
+        method: fast-forward
