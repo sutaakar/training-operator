@@ -15,6 +15,7 @@ __debug_bin
 **/.ipynb_checkpoints
 # The default output for various artifacts (e.g. Jupyter Notebooks after Papermill execution).
 artifacts
+.test-data/
 
 # Python cache files / packaging
 __pycache__/
