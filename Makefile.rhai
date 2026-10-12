@@ -304,19 +304,6 @@ prepare-test-image-overrides: ## Reset manifests/rhoai/params.env and inject any
 		replace_param odh-training-universal-workbench-image-cpu-3-5 "$${ODH_TH_TORCH_CPU_IMAGE}"
 	fi
 
-.PHONY: install-test-runtimes
-install-test-runtimes: check-kubectl ## Install Trainer runtimes required by the integration tests.
-	# RHOAI 3.5 bundles the runtimes in the Trainer manifests themselves. They
-	# are installed by deploy-rhoai through the root kustomization, which also
-	# applies the image overrides from prepare-test-image-overrides.
-	@echo "Trainer runtimes are bundled in $(RHOAI_MANIFESTS_DIR) and deployed by deploy-rhoai."
-
-.PHONY: install-test-imagestreams
-install-test-imagestreams: check-kubectl ## Install ImageStreams required by the integration tests.
-	# RHOAI 3.5 bundles the ImageStreams in the Trainer manifests themselves.
-	# They are installed by deploy-rhoai into the opendatahub namespace.
-	@echo "Trainer ImageStreams are bundled in $(RHOAI_MANIFESTS_DIR) and deployed by deploy-rhoai."
-
 .PHONY: test-e2e-rhai
 test-e2e-rhai: ginkgo ## Run the upstream Trainer RHAI E2E suite.
 	@mkdir -p "$(ARTIFACT_DIR)"
@@ -500,12 +487,6 @@ test-integration-rhai: ## Run the complete RHOAI Trainer integration test suite.
 	fi
 	if [[ "$$setup_passed" = true ]]; then
 		$(MAKE) -f Makefile.rhai install-s4 || setup_passed=false
-	fi
-	if [[ "$$setup_passed" = true ]]; then
-		$(MAKE) -f Makefile.rhai install-test-runtimes || setup_passed=false
-	fi
-	if [[ "$$setup_passed" = true ]]; then
-		$(MAKE) -f Makefile.rhai install-test-imagestreams || setup_passed=false
 	fi
 	if [[ "$$setup_passed" != true ]]; then
 		echo "Trainer integration test setup failed"
