@@ -251,7 +251,7 @@ deploy-rhoai: install-jobset-operator prepare-test-image-overrides ## Install Tr
 		echo "Using Trainer image: $(TRAINER_IMAGE)"
 		$(SED) -i "s|odh-kubeflow-trainer-controller-image=.*|odh-kubeflow-trainer-controller-image=$(TRAINER_IMAGE)|" "$(RHOAI_MANIFESTS_DIR)/params.env"
 	fi
-	@echo "Deploying RHOAI Training Operator to namespace: opendatahub"
+	@echo "Deploying RHOAI Trainer to namespace: opendatahub"
 	$(KUBECTL) create namespace opendatahub --dry-run=client -o yaml | $(KUBECTL) apply -f - >/dev/null 2>&1
 	$(KUBECTL) label namespace opendatahub openshift.io/cluster-monitoring=true --overwrite
 	# The PR environment deploys Trainer without the full RHOAI operator bundle,
@@ -276,7 +276,7 @@ deploy-rhoai: install-jobset-operator prepare-test-image-overrides ## Install Tr
 	echo "Waiting for deployment to be ready..."
 	$(KUBECTL) wait --for=condition=available --timeout=300s \
 		deployment/kubeflow-trainer-controller-manager -n opendatahub 2>/dev/null
-	echo "RHOAI Training Operator deployed successfully!"
+	echo "RHOAI Trainer deployed successfully!"
 
 .PHONY: prepare-test-image-overrides
 prepare-test-image-overrides: ## Reset manifests/rhoai/params.env and inject any runtime image overrides.
@@ -589,11 +589,11 @@ test-integration-rhai: ## Run the complete RHOAI Trainer integration test suite.
 
 .PHONY: undeploy-rhoai
 undeploy-rhoai: check-kubectl ## Undeploy Trainer using RHOAI manifests.
-	@echo "Undeploying RHOAI Training Operator from namespace: opendatahub"
+	@echo "Undeploying RHOAI Trainer from namespace: opendatahub"
 	echo "Deleting all TrainJob and TrainingRuntime CRs..."
 	$(KUBECTL) delete trainjobs.trainer.kubeflow.org --all --all-namespaces --ignore-not-found=true --timeout=60s
 	$(KUBECTL) delete trainingruntimes.trainer.kubeflow.org --all --all-namespaces --ignore-not-found=true --timeout=60s
 	$(KUBECTL) delete clustertrainingruntimes.trainer.kubeflow.org --all --ignore-not-found=true --timeout=60s
 	echo "Deleting operator and resources..."
 	$(KUBECTL) delete -k $(RHOAI_MANIFESTS_DIR) --ignore-not-found=true
-	echo "RHOAI Training Operator undeployed successfully!"
+	echo "RHOAI Trainer undeployed successfully!"
