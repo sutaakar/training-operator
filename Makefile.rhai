@@ -20,13 +20,9 @@ APPLICATIONS_NAMESPACE ?= opendatahub
 NFS_PROVISIONER_OPERATOR_MANIFEST ?= $(RHAI_TEST_MANIFESTS_DIR)/nfs-provisioner-operator.yaml
 NFS_PROVISIONER_MANIFEST ?= $(RHAI_TEST_MANIFESTS_DIR)/nfs-provisioner.yaml
 TRAINER_IMAGE ?=
-TRAINER_OPERATOR_RUNTIME_REF ?= main
-TRAINER_OPERATOR_SOURCE_URL ?= https://github.com/opendatahub-io/trainer-operator.git
-TRAINER_OPERATOR_SOURCE_DIR ?= $(PROJECT_DIR)/.test-data/trainer-operator
 export ODH_TH_TORCH_CUDA_IMAGE ?=
 export ODH_TH_TORCH_ROCM_IMAGE ?=
 export ODH_TH_TORCH_CPU_IMAGE ?=
-export ODH_OPENMPI_CUDA_IMAGE ?=
 ARTIFACT_DIR ?= $(PROJECT_DIR)/artifacts
 UPSTREAM_JUNIT_REPORT ?= upstream-trainer-junit.xml
 DW_SOURCE_DIR ?= $(PROJECT_DIR)/.test-data/distributed-workloads
@@ -250,7 +246,7 @@ install-s4: check-kubectl ## Install S4 S3-compatible storage for distributed-wo
 	echo "S4 bucket '$(S4_S3_BUCKET)' is ready"
 
 .PHONY: deploy-rhoai
-deploy-rhoai: install-jobset-operator ## Install Trainer using RHOAI manifests with kustomize.
+deploy-rhoai: install-jobset-operator prepare-test-image-overrides ## Install Trainer using RHOAI manifests with kustomize.
 	if [[ -n "$(TRAINER_IMAGE)" ]]; then
 		echo "Using Trainer image: $(TRAINER_IMAGE)"
 		$(SED) -i "s|odh-kubeflow-trainer-controller-image=.*|odh-kubeflow-trainer-controller-image=$(TRAINER_IMAGE)|" "$(RHOAI_MANIFESTS_DIR)/params.env"
@@ -282,66 +278,44 @@ deploy-rhoai: install-jobset-operator ## Install Trainer using RHOAI manifests w
 		deployment/kubeflow-trainer-controller-manager -n opendatahub 2>/dev/null
 	echo "RHOAI Training Operator deployed successfully!"
 
-.PHONY: prepare-trainer-operator-source
-prepare-trainer-operator-source: ## Clone trainer-operator and inject any runtime image overrides.
-	@if [[ -d "$(TRAINER_OPERATOR_SOURCE_DIR)/manifests" ]]; then
-		echo "Using existing trainer-operator source: $(TRAINER_OPERATOR_SOURCE_DIR)"
-	else
-		mkdir -p "$$(dirname "$(TRAINER_OPERATOR_SOURCE_DIR)")"
-		git clone --depth 1 --branch "$(TRAINER_OPERATOR_RUNTIME_REF)" \
-			"$(TRAINER_OPERATOR_SOURCE_URL)" "$(TRAINER_OPERATOR_SOURCE_DIR)"
-	fi
-	# Reset the params.env files so an empty override cannot keep values from a
-	# previous preparation of a reused checkout.
-	git -C "$(TRAINER_OPERATOR_SOURCE_DIR)" checkout -- \
-		manifests/runtimes/params.env manifests/imagestreams/params.env
+.PHONY: prepare-test-image-overrides
+prepare-test-image-overrides: ## Reset manifests/rhoai/params.env and inject any runtime image overrides.
+	# Reset params.env so an empty override cannot keep values from a previous
+	# preparation of a reused checkout.
+	git -C "$(PROJECT_DIR)" checkout -- "$(RHOAI_MANIFESTS_DIR)/params.env"
 	replace_param() {
-		local key="$$1" value="$$2" file="$$3"
-		if ! grep -q "^$${key}=" "$$file"; then
-			echo "Error: key '$${key}' not found in $$file" >&2
+		local key="$$1" value="$$2"
+		if ! grep -q "^$${key}=" "$(RHOAI_MANIFESTS_DIR)/params.env"; then
+			echo "Error: key '$${key}' not found in $(RHOAI_MANIFESTS_DIR)/params.env" >&2
 			return 1
 		fi
-		$(SED) -i "s|^$${key}=.*|$${key}=$${value}|" "$$file"
+		$(SED) -i "s|^$${key}=.*|$${key}=$${value}|" "$(RHOAI_MANIFESTS_DIR)/params.env"
 	}
 	if [[ -n "$${ODH_TH_TORCH_CUDA_IMAGE:-}" ]]; then
-		replace_param odh-th-torch-cuda-py312-image "$${ODH_TH_TORCH_CUDA_IMAGE}" \
-			"$(TRAINER_OPERATOR_SOURCE_DIR)/manifests/runtimes/params.env"
-		replace_param odh-training-universal-workbench-image-cuda-3-6 "$${ODH_TH_TORCH_CUDA_IMAGE}" \
-			"$(TRAINER_OPERATOR_SOURCE_DIR)/manifests/imagestreams/params.env"
+		replace_param odh-th-torch-cuda-py312-image "$${ODH_TH_TORCH_CUDA_IMAGE}"
+		replace_param odh-training-universal-workbench-image-cuda-3-5 "$${ODH_TH_TORCH_CUDA_IMAGE}"
 	fi
 	if [[ -n "$${ODH_TH_TORCH_ROCM_IMAGE:-}" ]]; then
-		replace_param odh-th-torch-rocm-py312-image "$${ODH_TH_TORCH_ROCM_IMAGE}" \
-			"$(TRAINER_OPERATOR_SOURCE_DIR)/manifests/runtimes/params.env"
-		replace_param odh-training-universal-workbench-image-rocm-3-6 "$${ODH_TH_TORCH_ROCM_IMAGE}" \
-			"$(TRAINER_OPERATOR_SOURCE_DIR)/manifests/imagestreams/params.env"
+		replace_param odh-th-torch-rocm-py312-image "$${ODH_TH_TORCH_ROCM_IMAGE}"
+		replace_param odh-training-universal-workbench-image-rocm-3-5 "$${ODH_TH_TORCH_ROCM_IMAGE}"
 	fi
 	if [[ -n "$${ODH_TH_TORCH_CPU_IMAGE:-}" ]]; then
-		replace_param odh-th-torch-cpu-py312-image "$${ODH_TH_TORCH_CPU_IMAGE}" \
-			"$(TRAINER_OPERATOR_SOURCE_DIR)/manifests/runtimes/params.env"
-		replace_param odh-training-universal-workbench-image-cpu-3-6 "$${ODH_TH_TORCH_CPU_IMAGE}" \
-			"$(TRAINER_OPERATOR_SOURCE_DIR)/manifests/imagestreams/params.env"
-	fi
-	if [[ -n "$${ODH_OPENMPI_CUDA_IMAGE:-}" ]]; then
-		replace_param odh-openmpi-cuda-image "$${ODH_OPENMPI_CUDA_IMAGE}" \
-			"$(TRAINER_OPERATOR_SOURCE_DIR)/manifests/runtimes/params.env"
+		replace_param odh-th-torch-cpu-py312-image "$${ODH_TH_TORCH_CPU_IMAGE}"
+		replace_param odh-training-universal-workbench-image-cpu-3-5 "$${ODH_TH_TORCH_CPU_IMAGE}"
 	fi
 
 .PHONY: install-test-runtimes
-install-test-runtimes: check-kubectl prepare-trainer-operator-source ## Install Trainer runtimes required by the integration tests.
-	@echo "Installing midstream Trainer runtimes..."
-	$(KUBECTL) apply --server-side -k "$(TRAINER_OPERATOR_SOURCE_DIR)/manifests/runtimes"
-	echo "Installing upstream E2E-only runtimes..."
-	$(KUBECTL) apply --server-side \
-		-f manifests/base/runtimes/jax_distributed.yaml \
-		-f manifests/base/runtimes/xgboost_distributed.yaml \
-		-f examples/flux/flux-runtime.yaml
+install-test-runtimes: check-kubectl ## Install Trainer runtimes required by the integration tests.
+	# RHOAI 3.5 bundles the runtimes in the Trainer manifests themselves. They
+	# are installed by deploy-rhoai through the root kustomization, which also
+	# applies the image overrides from prepare-test-image-overrides.
+	@echo "Trainer runtimes are bundled in $(RHOAI_MANIFESTS_DIR) and deployed by deploy-rhoai."
 
 .PHONY: install-test-imagestreams
-install-test-imagestreams: check-kubectl prepare-trainer-operator-source ## Install ImageStreams required by the integration tests.
-	@echo "Installing Trainer test ImageStreams..."
-	$(KUBECTL) create namespace $(APPLICATIONS_NAMESPACE) --dry-run=client -o yaml | $(KUBECTL) apply -f - >/dev/null 2>&1
-	$(KUBECTL) apply --server-side -n $(APPLICATIONS_NAMESPACE) \
-		-k "$(TRAINER_OPERATOR_SOURCE_DIR)/manifests/imagestreams"
+install-test-imagestreams: check-kubectl ## Install ImageStreams required by the integration tests.
+	# RHOAI 3.5 bundles the ImageStreams in the Trainer manifests themselves.
+	# They are installed by deploy-rhoai into the opendatahub namespace.
+	@echo "Trainer ImageStreams are bundled in $(RHOAI_MANIFESTS_DIR) and deployed by deploy-rhoai."
 
 .PHONY: test-e2e-rhai
 test-e2e-rhai: ginkgo ## Run the upstream Trainer RHAI E2E suite.
