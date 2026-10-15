@@ -1,6 +1,6 @@
 module github.com/kubeflow/trainer/v2
 
-go 1.27.0
+go 1.26.0
 
 require (
 	github.com/coreos/go-oidc/v3 v3.21.0
@@ -27,7 +27,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20260721132016-d427ff9ee9ad
 	k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3
 	sigs.k8s.io/controller-runtime v0.25.2
-	sigs.k8s.io/jobset v0.13.0
+	sigs.k8s.io/jobset v0.12.0
 	sigs.k8s.io/kind v0.33.0
 	sigs.k8s.io/scheduler-plugins v0.35.4-devel
 	sigs.k8s.io/structured-merge-diff/v6 v6.4.2
