@@ -22,7 +22,7 @@ SED ?= sed
 KUBECTL ?= $(shell command -v oc 2>/dev/null || command -v kubectl 2>/dev/null)
 RHOAI_MANIFESTS_DIR ?= $(PROJECT_DIR)/manifests/rhoai
 RHAI_TEST_MANIFESTS_DIR ?= $(PROJECT_DIR)/odh_utils/tests/manifests
-APPLICATIONS_NAMESPACE ?= opendatahub
+APPLICATIONS_NAMESPACE ?= redhat-ods-applications
 NFS_PROVISIONER_OPERATOR_MANIFEST ?= $(RHAI_TEST_MANIFESTS_DIR)/nfs-provisioner-operator.yaml
 NFS_PROVISIONER_MANIFEST ?= $(RHAI_TEST_MANIFESTS_DIR)/nfs-provisioner.yaml
 TRAINER_IMAGE ?=
@@ -260,19 +260,19 @@ deploy-rhoai: install-jobset-operator ## Install Trainer using RHOAI manifests w
 		echo "Using Trainer image: $(TRAINER_IMAGE)"
 		$(SED) -i "s|odh-kubeflow-trainer-controller-image=.*|odh-kubeflow-trainer-controller-image=$(TRAINER_IMAGE)|" "$(RHOAI_MANIFESTS_DIR)/params.env"
 	fi
-	@echo "Deploying RHOAI Training Operator to namespace: opendatahub"
-	$(KUBECTL) create namespace opendatahub --dry-run=client -o yaml | $(KUBECTL) apply -f - >/dev/null 2>&1
-	$(KUBECTL) label namespace opendatahub openshift.io/cluster-monitoring=true --overwrite
+	@echo "Deploying RHOAI Training Operator to namespace: $(APPLICATIONS_NAMESPACE)"
+	$(KUBECTL) create namespace $(APPLICATIONS_NAMESPACE) --dry-run=client -o yaml | $(KUBECTL) apply -f - >/dev/null 2>&1
+	$(KUBECTL) label namespace $(APPLICATIONS_NAMESPACE) openshift.io/cluster-monitoring=true --overwrite
 	# The PR environment deploys Trainer without the full RHOAI operator bundle,
 	# so provide the namespace-scoped discovery permissions normally installed by RHOAI.
 	$(KUBECTL) create role prometheus-k8s-monitoring \
 		--verb=get --verb=list --verb=watch \
 		--resource=pods,services,endpoints \
-		-n opendatahub --dry-run=client -o yaml | $(KUBECTL) apply -f - >/dev/null
+		-n $(APPLICATIONS_NAMESPACE) --dry-run=client -o yaml | $(KUBECTL) apply -f - >/dev/null
 	$(KUBECTL) create rolebinding prometheus-k8s-monitoring \
 		--role=prometheus-k8s-monitoring \
 		--serviceaccount=openshift-monitoring:prometheus-k8s \
-		-n opendatahub --dry-run=client -o yaml | $(KUBECTL) apply -f - >/dev/null
+		-n $(APPLICATIONS_NAMESPACE) --dry-run=client -o yaml | $(KUBECTL) apply -f - >/dev/null
 	echo "Applying CRDs first..."
 	$(KUBECTL) apply --server-side=true -k $(RHOAI_MANIFESTS_DIR)/../base/crds
 	echo "Waiting for CRDs to be established..."
@@ -284,7 +284,7 @@ deploy-rhoai: install-jobset-operator ## Install Trainer using RHOAI manifests w
 	$(KUBECTL) apply -k $(RHOAI_MANIFESTS_DIR) --server-side=true --force-conflicts
 	echo "Waiting for deployment to be ready..."
 	$(KUBECTL) wait --for=condition=available --timeout=300s \
-		deployment/kubeflow-trainer-controller-manager -n opendatahub 2>/dev/null
+		deployment/kubeflow-trainer-controller-manager -n $(APPLICATIONS_NAMESPACE) 2>/dev/null
 	echo "RHOAI Training Operator deployed successfully!"
 
 .PHONY: install-test-runtimes
@@ -583,7 +583,7 @@ test-integration-rhai: ## Run the complete RHOAI Trainer integration test suite.
 
 .PHONY: undeploy-rhoai
 undeploy-rhoai: check-kubectl ## Undeploy Trainer using RHOAI manifests.
-	@echo "Undeploying RHOAI Training Operator from namespace: opendatahub"
+	@echo "Undeploying RHOAI Training Operator from namespace: $(APPLICATIONS_NAMESPACE)"
 	echo "Deleting all TrainJob and TrainingRuntime CRs..."
 	$(KUBECTL) delete trainjobs.trainer.kubeflow.org --all --all-namespaces --ignore-not-found=true --timeout=60s
 	$(KUBECTL) delete trainingruntimes.trainer.kubeflow.org --all --all-namespaces --ignore-not-found=true --timeout=60s
