@@ -165,7 +165,7 @@ install-nfs-provisioner: check-kubectl ## Install the NFS provisioner and RWX St
 	echo "Waiting for NFS provisioner operator CSV to be created by OLM..."
 	for i in $$(seq 1 60); do
 		CSV=$$($(KUBECTL) get csv -n openshift-operators \
-			-l operators.coreos.com=nfs-provisioner-operator.openshift-operators \
+			-l operators.coreos.com/nfs-provisioner-operator.openshift-operators \
 			-o name 2>/dev/null | head -1)
 		if [[ -n "$$CSV" ]]; then
 			echo "CSV found: $$CSV"
@@ -176,7 +176,7 @@ install-nfs-provisioner: check-kubectl ## Install the NFS provisioner and RWX St
 	done
 	$(KUBECTL) wait --for=jsonpath='{.status.phase}'=Succeeded csv \
 		-n openshift-operators \
-		-l operators.coreos.com=nfs-provisioner-operator.openshift-operators \
+		-l operators.coreos.com/nfs-provisioner-operator.openshift-operators \
 		--timeout=300s
 	echo "Waiting for the NFS provisioner CRD to be created..."
 	for i in $$(seq 1 30); do
