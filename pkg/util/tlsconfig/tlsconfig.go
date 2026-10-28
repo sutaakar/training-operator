@@ -146,7 +146,7 @@ func lookupCipherSuiteID(name string) (id uint16, recognized, insecure bool) {
 // legacy-suite warning.
 func isRC4Suite(name string) bool {
 	switch name {
-	case "TLS_RSA_WITH_RC4_128_SHA", "TLS_ECDHE_RSA_WITH_RC4_128_SHA", "TLS_ECDHE_ECDSA_WITH_RC4_128_SHA":
+	case "TLS_RSA_WITH_RC4_128_SHA", "TLS_ECDHE_RSA_WITH_RC4_128_SHA", "TLS_ECDHE_ECDSA_WITH_RC4_128_SHA": // tls-lint:ignore:weak-cipher-rc4
 		return true
 	}
 	return false
