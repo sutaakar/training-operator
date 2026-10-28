@@ -164,14 +164,6 @@ func (r *TrainJobReconciler) reconcileObjects(ctx context.Context, runtime jobru
 			}
 		}
 	}
-<<<<<<< HEAD
-	// Reconcile NetworkPolicy for pod isolation
-	if err := rhai.ReconcileNetworkPolicy(ctx, r.client, trainJob); err != nil {
-		return err
-	}
-	return nil
-=======
-
 	// Runs even for finished TrainJobs, so plugins can clean up objects of finished or
 	// suspended TrainJobs (e.g. a gang-scheduling PodGroup, which would otherwise keep
 	// reserving scheduler queue capacity indefinitely).
@@ -184,8 +176,11 @@ func (r *TrainJobReconciler) reconcileObjects(ctx context.Context, runtime jobru
 			return errors.Join(applyErr, fmt.Errorf("deleting %s: %w", klog.KObj(object), err))
 		}
 	}
+	// Reconcile NetworkPolicy for pod isolation.
+	if err := rhai.ReconcileNetworkPolicy(ctx, r.client, trainJob); err != nil {
+		return errors.Join(applyErr, err)
+	}
 	return applyErr
->>>>>>> upstream/master
 }
 
 func (r *TrainJobReconciler) reconcileDeadline(ctx context.Context, trainJob *trainer.TrainJob) ctrl.Result {

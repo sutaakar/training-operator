@@ -297,8 +297,8 @@ func (f *fakeRuntime) DeleteObjects(context.Context, *trainer.TrainJob) ([]clien
 	return f.objsToDelete, f.deleteObjectsErr
 }
 
-// TestReconcileObjects covers the branch between materializing new objects and cleaning up
-// stale ones in isolation, independently of any concrete plugin.
+// TestReconcileObjects covers materializing new objects, cleaning up stale ones, and
+// reconciling the TrainJob NetworkPolicy in isolation, independently of any concrete plugin.
 func TestReconcileObjects(t *testing.T) {
 	runningTrainJob := utiltesting.MakeTrainJobWrapper(metav1.NamespaceDefault, "test-trainjob").Obj()
 	suspendedTrainJob := utiltesting.MakeTrainJobWrapper(metav1.NamespaceDefault, "test-trainjob").
@@ -353,6 +353,7 @@ func TestReconcileObjects(t *testing.T) {
 			objsToApply:      toApplyObjs,
 			objsToDelete:     []client.Object{toDeleteObj},
 			seedObjs:         []client.Object{toDeleteObj},
+			wantApplyCalled:  true,
 			wantDeleteCalled: true,
 			wantDeleted:      true,
 		},
@@ -361,6 +362,7 @@ func TestReconcileObjects(t *testing.T) {
 			objsToDelete: []client.Object{
 				&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "already-gone", Namespace: metav1.NamespaceDefault}},
 			},
+			wantApplyCalled:  true,
 			wantDeleteCalled: true,
 		},
 		"NewObjects error does not block cleanup, and is still returned": {
@@ -369,6 +371,7 @@ func TestReconcileObjects(t *testing.T) {
 			objsToDelete:      []client.Object{toDeleteObj},
 			seedObjs:          []client.Object{toDeleteObj},
 			wantNewObjsCalled: true,
+			wantApplyCalled:   true,
 			wantDeleteCalled:  true,
 			wantDeleted:       true,
 			wantErr:           errNewObjects,
